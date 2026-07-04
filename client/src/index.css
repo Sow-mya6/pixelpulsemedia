@@ -1,11 +1,26 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;500;700&display=swap');
+
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
+  --primary: #00f2fe;
+  --primary-hover: #4facfe;
+  --secondary: #ff0844;
+  --tertiary: #b06ab3;
+
+  --bg-main: #ffffff;
+  --bg-secondary: #f8fafc;
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(0, 0, 0, 0.1);
+
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+
+  font-family: 'Inter', system-ui, sans-serif;
+  line-height: 1.6;
   font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  color-scheme: light;
+  color: var(--text-main);
+  background-color: var(--bg-main);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -13,56 +28,89 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
+/* Headings font */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Outfit', sans-serif;
 }
 
-body {
+/* Page background */
+html, body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  background-color: var(--bg-main);
+  color: var(--text-main);
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+/* Root container */
+#root {
+  min-height: 100vh;
+  background-color: var(--bg-main);
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
+/* Links */
+a {
   font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  color: var(--primary);
+  text-decoration: none;
+  transition: color 0.3s ease;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+a:hover {
+  color: var(--primary-hover);
+}
+
+/* Buttons */
+button {
+  border-radius: 30px;
+  border: none;
+  padding: 0.8em 2em;
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-family: 'Outfit', sans-serif;
+  background: linear-gradient(90deg, #ff0844, #b06ab3);
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 15px rgba(255, 8, 68, 0.4);
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 242, 254, 0.6);
+}
+
+button:disabled {
+  background: #222222;
+  color: #666666;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Inputs */
+input, textarea {
+  background-color: #111111;
+  color: #ffffff;
+  border: 1px solid #333333;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+/* Glass card / panel */
+.glass-panel {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  transition: box-shadow 0.3s ease;
+}
+
+.glass-panel:hover {
+  box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+}
+
+/* Utility text */
+.text-muted {
+  color: var(--text-muted);
 }

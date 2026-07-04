@@ -2,64 +2,99 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 
-dotenv.config();
+// Route imports
+import contactRoutes from "./routes/contactRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
+import Message from "./models/Message.js";
+import { restoreMessagesFromFile } from "./utils/messageBackup.js";
+
+import path from "path";
+import { fileURLToPath } from "url";
+
+// ES modules __dirname workaround
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.join(__dirname, ".env") });
 
 const app = express();
-app.use(cors());
-app.use(express.json());
 
-// 🔹 MongoDB Connection
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB connected successfully"))
-  .catch((err) => console.error("MongoDB connection error:", err));
-
-// 🔹 Message Schema
-const messageSchema = new mongoose.Schema(
-  {
-    name: String,
-    email: String,
-    message: String
-  },
-  { timestamps: true }
+// Security Middleware
+app.use(helmet());
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL || "*", // Fallback to * for easy local dev/portfolio use
+    credentials: true,
+  })
 );
 
-const Message = mongoose.model("Message", messageSchema);
+// Rate Limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: "Too many requests from this IP, please try again later",
+});
+app.use("/api", limiter);
 
-// 🔹 Test Route
+// Body parser wrapped with limit to prevent large payloads
+app.use(express.json({ limit: "10kb" })); 
+
+import { MongoMemoryServer } from "mongodb-memory-server";
+
+// MongoDB Connection Logic
+const connectDB = async () => {
+  try {
+    let mongoUri = process.env.MONGO_URI;
+
+    // Use in-memory if no URI provided or if it's the broken one
+    if (!mongoUri || mongoUri.includes("rq6m9ix")) {
+      console.log("Using MongoDB In-Memory Server...");
+      const mongoServer = await MongoMemoryServer.create();
+      mongoUri = mongoServer.getUri();
+      
+      // Cleanup hook for graceful shutdown
+      process.on('SIGINT', async () => {
+        await mongoose.disconnect();
+        await mongoServer.stop();
+        process.exit(0);
+      });
+    }
+
+    await mongoose.connect(mongoUri);
+    console.log("MongoDB connected successfully");
+
+    // Restore saved messages into in-memory database
+    await restoreMessagesFromFile(Message);
+  } catch (err) {
+    console.error("MongoDB connection error:", err);
+    process.exit(1);
+  }
+};
+
+connectDB();
+
+// Test Route
 app.get("/", (req, res) => {
   res.send("Backend running 🚀");
 });
 
-// 🔹 Contact API (Store Message)
-app.post("/api/contact", async (req, res) => {
-  const { name, email, message } = req.body;
+// API Routes
+app.use("/api/contact", contactRoutes);
+app.use("/api/admin", adminRoutes);
 
-  if (!name || !email || !message) {
-    return res.status(400).json({ message: "All fields required" });
-  }
-
-  try {
-    await Message.create({ name, email, message });
-    res.status(200).json({ message: "Message stored successfully" });
-  } catch (error) {
-    res.status(500).json({ message: "Failed to store message" });
-  }
-});
-// 🔹 Admin API – NO PASSWORD
-app.get("/api/admin/messages", async (req, res) => {
-  try {
-    const messages = await Message.find().sort({ createdAt: -1 });
-    res.status(200).json(messages);
-  } catch (error) {
-    res.status(500).json({ message: "Failed to fetch messages" });
-  }
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error("Global Error Handler:", err.stack);
+  res.status(err.status || 500).json({
+    message: err.message || "Internal Server Error",
+    ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
+  });
 });
 
-  
-
-// 🔹 Start Server
+// Start Server
 const PORT = process.env.PORT || 5010;
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

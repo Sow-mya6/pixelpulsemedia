@@ -2,100 +2,107 @@ import { useEffect, useState } from "react";
 
 const Admin = () => {
   const [messages, setMessages] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  
+  // Basic security on frontend
+  const [secret, setSecret] = useState("");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  useEffect(() => {
-    fetch("http://localhost:5008/api/admin/messages")
-      .then((res) => res.json())
-      .then((data) => {
-        setMessages(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setLoading(false);
+  const fetchMessages = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5010";
+      // Send secret as a header
+      const res = await fetch(`${apiUrl}/api/admin/messages`, {
+        headers: {
+          "x-admin-secret": secret
+        }
       });
-  }, []);
+      
+      if (!res.ok) {
+        throw new Error("Unauthorized or Failed to fetch");
+      }
+      
+      const data = await res.json();
+      setMessages(data);
+      setIsAuthenticated(true);
+    } catch (err) {
+      setError(err.message);
+      setIsAuthenticated(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    fetchMessages();
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <section className="section" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div className="glass-panel" style={{ maxWidth: "400px", width: "100%", textAlign: "center" }}>
+          <h2 style={{ fontSize: "24px", marginBottom: "20px" }}>Admin Access</h2>
+          <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+            <input 
+              type="password" 
+              placeholder="Enter Admin Secret" 
+              value={secret}
+              onChange={(e) => setSecret(e.target.value)}
+              required
+            />
+            <button type="submit" disabled={loading}>
+              {loading ? "Verifying..." : "Login"}
+            </button>
+            {error && <p style={{ color: "#f87171", fontSize: "14px" }}>{error}</p>}
+          </form>
+        </div>
+      </section>
+    );
+  }
 
   return (
-    <div style={pageStyle}>
-      <h1 style={headingStyle}>Admin – Contact Messages</h1>
+    <section className="section" style={{ maxWidth: "1000px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px" }}>
+        <h2 style={{ margin: 0, fontSize: "2rem" }}>Admin Dashboard</h2>
+        <button onClick={() => setIsAuthenticated(false)} style={{ padding: "8px 16px", background: "transparent", border: "1px solid var(--glass-border)", color: "var(--text-muted)" }}>Logout</button>
+      </div>
 
-      {loading ? (
-        <p style={textStyle}>Loading messages...</p>
-      ) : messages.length === 0 ? (
-        <p style={textStyle}>No messages found</p>
-      ) : (
-        <table style={tableStyle}>
-          <thead>
-            <tr>
-              <th style={thStyle}>Name</th>
-              <th style={thStyle}>Email</th>
-              <th style={thStyle}>Message</th>
-              <th style={thStyle}>Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {messages.map((msg) => (
-              <tr key={msg._id}>
-                <td style={tdStyle}>{msg.name}</td>
-                <td style={tdStyle}>{msg.email}</td>
-                <td style={tdStyle}>{msg.message}</td>
-                <td style={tdStyle}>
-                  {new Date(msg.createdAt).toLocaleString()}
-                </td>
+      <div className="glass-panel" style={{ padding: "0", overflowX: "auto" }}>
+        {loading ? (
+          <div style={{ padding: "40px", textAlign: "center" }}>Refreshing...</div>
+        ) : messages.length === 0 ? (
+          <div style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>No messages found.</div>
+        ) : (
+          <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid var(--glass-border)", background: "rgba(0,0,0,0.02)" }}>
+                <th style={{ padding: "16px", fontWeight: "600", color: "var(--primary)" }}>Name</th>
+                <th style={{ padding: "16px", fontWeight: "600", color: "var(--primary)" }}>Email</th>
+                <th style={{ padding: "16px", fontWeight: "600", color: "var(--primary)" }}>Message</th>
+                <th style={{ padding: "16px", fontWeight: "600", color: "var(--primary)" }}>Date</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
+            </thead>
+            <tbody>
+              {messages.map((msg) => (
+                <tr key={msg._id} style={{ borderBottom: "1px solid var(--glass-border)", transition: "background 0.2s ease" }} onMouseEnter={e => e.currentTarget.style.background = "rgba(0,0,0,0.02)"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                  <td style={{ padding: "16px" }}>{msg.name}</td>
+                  <td style={{ padding: "16px", color: "var(--text-muted)" }}>{msg.email}</td>
+                  <td style={{ padding: "16px", maxWidth: "300px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={msg.message}>{msg.message}</td>
+                  <td style={{ padding: "16px", color: "var(--text-muted)", fontSize: "0.9rem" }}>
+                    {new Date(msg.createdAt).toLocaleDateString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </section>
   );
-};
-
-/* 🔹 STYLES */
-
-const pageStyle = {
-  minHeight: "100vh",
-  backgroundColor: "#f1f5f9",
-  padding: "40px",
-  paddingTop: "120px",   // 👈 IMPORTANT (push below navbar)
-  color: "#0f172a"
-};
-
-
-const headingStyle = {
-  textAlign: "center",
-  marginBottom: "30px",
-  fontSize: "28px",
-  color: "#0f172a"
-};
-
-const textStyle = {
-  textAlign: "center",
-  fontSize: "18px",
-  color: "#334155"
-};
-
-const tableStyle = {
-  width: "100%",
-  borderCollapse: "collapse",
-  backgroundColor: "#ffffff",
-  boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
-};
-
-const thStyle = {
-  padding: "12px",
-  border: "1px solid #e2e8f0",
-  backgroundColor: "#0f172a",
-  color: "#ffffff",
-  textAlign: "left"
-};
-
-const tdStyle = {
-  padding: "12px",
-  border: "1px solid #e2e8f0",
-  color: "#0f172a"
 };
 
 export default Admin;
